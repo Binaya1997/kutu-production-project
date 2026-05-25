@@ -34,7 +34,3 @@ jobs:
       - name : Push the Frontend Images
         run: docker push binayadevops/kutu-frontend:v1
 
-
-
-
-        
