@@ -7,6 +7,9 @@ on:
     
   workflow_dispatch:    
 
+env:
+  TAG: ${{ github.sha }}
+  
 jobs:
 
   backend:
@@ -25,10 +28,10 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build backen Image
-        run: docker build -t binayadevops/kutu-backend:v2 ./backend
+        run: docker build -t binayadevops/kutu-backend:${TAG} ./backend
 
       - name : Push the backend Images
-        run: docker push binayadevops/kutu-backend:v2
+        run: docker push binayadevops/kutu-backend:${TAG}
    
   frontend:
     
@@ -48,8 +51,8 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}  
 
       - name: Build Frontend Image
-        run: docker build -t binayadevops/kutu-frontend:v2 ./frontend
+        run: docker build -t binayadevops/kutu-frontend:${TAG} ./frontend
 
       - name : Push the Frontend Images
-        run: docker push binayadevops/kutu-frontend:v2
+        run: docker push binayadevops/kutu-frontend:${TAG}
 
