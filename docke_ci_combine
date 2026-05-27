@@ -1,0 +1,399 @@
+Dockerized Multi-Service Application with GitHub Actions CI Pipeline
+📌 Project Overview
+
+This project demonstrates a beginner-to-intermediate level DevOps CI pipeline using:
+
+Docker
+Docker Compose
+GitHub Actions
+PostgreSQL
+Frontend + Backend architecture
+Docker Hub image automation
+
+The project focuses on practical DevOps implementation, troubleshooting, networking, persistent storage, and CI/CD automation.
+
+🚀 Project Architecture
+Frontend
+   ↓
+Backend API
+   ↓
+PostgreSQL Database
+🚀 Technologies Used
+Technology	Purpose
+Docker	Containerization
+Docker Compose	Multi-container management
+GitHub Actions	CI automation
+PostgreSQL	Database
+Node.js	Backend runtime
+HTML / JavaScript	Frontend
+Docker Hub	Container registry
+🚀 Features Implemented
+✅ Docker
+Dockerfiles
+Multi-stage builds
+Alpine images
+.dockerignore
+Image tagging
+Docker Hub push/pull
+✅ Docker Networking
+Custom bridge networks
+Container communication
+DNS troubleshooting
+Backend ↔ PostgreSQL connection
+✅ Docker Volumes
+Persistent PostgreSQL data
+Volume mounting
+Data persistence after container recreation
+✅ Docker Compose
+Multi-container orchestration
+Service dependency management
+Healthchecks basics
+✅ GitHub Actions CI
+Workflow automation
+Multi-job pipelines
+Docker image build automation
+Docker Hub image push automation
+Pull Request validation
+Manual workflow trigger
+Dynamic SHA-based image tagging
+GitHub Secrets integration
+🚀 Step-by-Step Project Setup
+📦 Step 1 — Create Project Structure
+mkdir kutu-db-project
+cd kutu-db-project
+
+mkdir frontend backend
+🚀 Step 2 — Backend Setup
+Create Backend Files
+cd backend
+npm init -y
+
+Install dependencies:
+
+npm install express cors pg
+Create server.js
+const express = require('express');
+const cors = require('cors');
+const { Pool } = require('pg');
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+const pool = new Pool({
+    user: 'admin',
+    host: 'postgres',
+    database: 'kutu_db',
+    password: 'admin123',
+    port: 5432,
+});
+
+pool.query(`
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name TEXT
+)
+`);
+
+app.post('/add-user', async (req, res) => {
+
+    const { name } = req.body;
+
+    await pool.query(
+        'INSERT INTO users(name) VALUES($1)',
+        [name]
+    );
+
+    res.send('User added successfully');
+});
+
+app.get('/users', async (req, res) => {
+
+    const result = await pool.query(
+        'SELECT * FROM users'
+    );
+
+    res.json(result.rows);
+});
+
+app.listen(5000, () => {
+    console.log('Backend running on port 5000');
+});
+🚀 Step 3 — Backend Dockerfile
+
+Create Dockerfile:
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["npm", "start"]
+🚀 Step 4 — Frontend Setup
+
+Create index.html
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kutu DB App</title>
+</head>
+<body>
+
+<h2>Add User</h2>
+
+<input type="text" id="name" placeholder="Enter name">
+
+<button onclick="addUser()">Submit</button>
+
+<h2>Users</h2>
+
+<ul id="users"></ul>
+
+<script>
+
+async function addUser() {
+
+    const name = document.getElementById('name').value;
+
+    await fetch('http://localhost:5000/add-user', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name })
+    });
+
+    loadUsers();
+}
+
+async function loadUsers() {
+
+    const response = await fetch('http://localhost:5000/users');
+
+    const users = await response.json();
+
+    const userList = document.getElementById('users');
+
+    userList.innerHTML = '';
+
+    users.forEach(user => {
+
+        const li = document.createElement('li');
+
+        li.textContent = user.name;
+
+        userList.appendChild(li);
+    });
+}
+
+loadUsers();
+
+</script>
+
+</body>
+</html>
+🚀 Step 5 — Frontend Dockerfile
+FROM nginx:alpine
+
+COPY . /usr/share/nginx/html
+🚀 Step 6 — Docker Compose Setup
+
+Create docker-compose.yml
+
+services:
+
+  postgres:
+
+    image: postgres:16
+
+    container_name: postgres-container
+
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: kutu_db
+
+    ports:
+      - '5432:5432'
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  backend:
+
+    build: ./backend
+
+    container_name: backend-container
+
+    ports:
+      - '5000:5000'
+
+    depends_on:
+      - postgres
+
+  frontend:
+
+    build: ./frontend
+
+    container_name: frontend-container
+
+    ports:
+      - '8080:80'
+
+    depends_on:
+      - backend
+
+volumes:
+  postgres-data:
+🚀 Step 7 — Start Containers
+sudo docker compose up -d
+
+Check containers:
+
+sudo docker ps
+🚀 Step 8 — Test Application
+
+Frontend:
+
+http://localhost:8080
+
+Backend API:
+
+curl http://localhost:5000/users
+🚀 Step 9 — Push Images to Docker Hub
+
+Tag images:
+
+sudo docker tag backend-image binayadevops/kutu-backend:v1
+sudo docker tag frontend-image binayadevops/kutu-frontend:v1
+
+Push:
+
+sudo docker push binayadevops/kutu-backend:v1
+sudo docker push binayadevops/kutu-frontend:v1
+🚀 Step 10 — GitHub Actions CI Setup
+
+Create workflow directory:
+
+mkdir -p .github/workflows
+
+Create:
+
+.github/workflows/docker.yml
+🚀 Step 11 — GitHub Actions Workflow
+name: Multi Job Docker CI
+
+on:
+
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+env:
+  TAG: ${{ github.sha }}
+
+jobs:
+
+  backend:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Backend Image
+        run: docker build -t binayadevops/kutu-backend:${TAG} ./backend
+
+      - name: Push Backend Image
+        run: docker push binayadevops/kutu-backend:${TAG}
+
+  frontend:
+
+    needs: backend
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Frontend Image
+        run: docker build -t binayadevops/kutu-frontend:${TAG} ./frontend
+
+      - name: Push Frontend Image
+        run: docker push binayadevops/kutu-frontend:${TAG}
+🚀 Step 12 — Configure GitHub Secrets
+
+Inside GitHub repository:
+
+Settings
+   ↓
+Secrets and variables
+   ↓
+Actions
+
+Add:
+
+Secret	Value
+DOCKER_USERNAME	Docker Hub username
+DOCKER_PASSWORD	Docker Hub password/token
+🚀 Step 13 — Push Workflow
+git add .
+git commit -m "added github actions workflow"
+git push
+🚀 CI Pipeline Flow
+Git Push
+   ↓
+GitHub Actions Trigger
+   ↓
+Backend Build
+   ↓
+Backend Push
+   ↓
+Frontend Build
+   ↓
+Frontend Push
+🚀 Key Learning Outcomes
+Docker containerization
+Docker networking
+Docker volumes
+Multi-container architecture
+GitHub Actions workflows
+CI automation
+Docker image automation
+GitHub Secrets
+Pull Request validation
+Dynamic image tagging
+CI troubleshooting
+DevOps workflow fundamentals
+
